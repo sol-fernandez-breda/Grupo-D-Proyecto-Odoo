@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="category_inmobiliaria" model="res.groups">
+        <field name="name">Inmobiliaria</field>
+    </record>
+
+    <record id="group_estate_property_manager" model="res.groups">
+        <field name="name">Manager de Propiedades</field>
+        <field name="category_id" ref="category_inmobiliaria"/>
+    </record>
+
+    <record id="group_estate_property_seller" model="res.groups">
+        <field name="name">Vendedor de Propiedades</field>
+        <field name="category_id" ref="category_inmobiliaria"/>
+    </record>
+</odoo>

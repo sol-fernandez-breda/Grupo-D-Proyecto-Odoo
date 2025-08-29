@@ -1,0 +1,3 @@
+[submodule "Odoo 18/odoo/custom/src/odoo"]
+	path = Odoo 18/odoo/custom/src/odoo
+	url = https://github.com/sol-fernandez-breda/Grupo-D-Proyecto-Odoo.git
