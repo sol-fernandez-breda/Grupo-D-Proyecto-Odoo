@@ -1,9 +1,16 @@
 from odoo import models, fields, api
 from datetime import timedelta
+from odoo.exceptions import UserError
+
 
 class EstatePropertyOffer(models.Model):
     _name = "estate.property.offer"
     _description = "Oferta sobre propiedad"
+
+    _sql_constraints = [
+        ('unique_partner_property','UNIQUE(partner_id, property_id)','Un mismo cliente no puede hacer más de una oferta sobre la misma propiedad')
+    ]
+
 
     price = fields.Float(string="Precio", required=True)
     status = fields.Selection(
@@ -69,4 +76,25 @@ class EstatePropertyOffer(models.Model):
 
             
             offer.status = "accepted"
+
+    @api.model
+    def create(self, vals):
+        property_id = vals.get("property_id")
+        price = vals.get("price")
+
+        property_obj = self.env["estate.property"].browse(property_id)
+
+        if property_obj.offer_ids:
+            best_price = max(property_obj.offer_ids.mapped("price"))
+            if price <= best_price:
+                raise UserError("La oferta debe ser mayor a la mejor oferta existente")
+
+        if property_obj.state not in ["nuevo", "oferta_recibida"]:
+            raise UserError("Sólo se pueden hacer ofertas en propiedades nuevas o con ofertas recibidas")
+
+        offer = super().create(vals)
+
+        property_obj.state = "oferta_recibida"
+
+        return offer
 

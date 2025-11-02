@@ -39,6 +39,26 @@
                                 type="object"
                                 string="Marcar como vendida"
                                 class="btn-success"/>
+                        <button name="action_generate_auto_offer"
+                                type="object"
+                                string="Generar oferta automática"
+                                class="btn-primary"/>
+
+                        <button name="action_clear_tags"
+                                type="object"
+                                string="Sacar etiquetas"
+                                class="oe_highlight"/>
+
+                        <button name="action_load_all_tags"
+                                type="object"
+                                string="Cargar todas las etiquetas"
+                                class="oe_highlight"/>
+
+                        <button name="action_add_new_tag"
+                                type="object"
+                                string="A estrenar"
+                                class="oe_highlight"/>
+
                     </header>
 
                     <sheet>
@@ -59,7 +79,11 @@
                                 <field name="selling_price"/>
                                 <field name="best_offer"/>
                             </group>
+                            <group string="Contactos que hicieron ofertas">
+                                <field name="offer_partner_ids" widget="many2many_tags"/>
+                            </group>
                         </group>
+                        
 
                         <notebook>
                             <page string="Descripción">

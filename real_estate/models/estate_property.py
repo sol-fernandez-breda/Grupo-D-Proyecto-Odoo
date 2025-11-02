@@ -1,6 +1,7 @@
-from odoo import models, fields, api
+from odoo import models, fields, api, Command
 from dateutil.relativedelta import relativedelta
 from odoo.exceptions import UserError
+import random
 
 class EstateProperty(models.Model):
     _name = "estate.property"
@@ -88,6 +89,7 @@ class EstateProperty(models.Model):
         store=True
     )
     
+    @api.depends('offer_ids', 'offer_ids.price')
     def _compute_best_offer(self):
         for record in self:
             offers = record.offer_ids.mapped('price')
@@ -102,7 +104,7 @@ class EstateProperty(models.Model):
 
     @api.onchange('expected_price')
     def _onchange_expected_price(self):
-        if self.expected_price < 10000:
+        if 0 < self.expected_price < 10000:
             raise UserError("El precio ingresado es muy bajo")
 
     def action_cancel(self):
@@ -116,4 +118,74 @@ class EstateProperty(models.Model):
             if record.state == "cancelado":
                 raise UserError("No se puede vender una propiedad cancelada.")
             record.state = "vendido"
+
+    offer_partner_ids = fields.Many2many(
+        comodel_name="res.partner",
+        string="Personas que hicieron ofertas",
+        compute="_compute_offer_partners",
+        store=True
+    )
+
+    @api.depends('offer_ids.partner_id')
+    def _compute_offer_partners(self):
+        for record in self:
+            record.offer_partner_ids = record.offer_ids.mapped('partner_id')
+
+    def action_generate_auto_offer(self):
+        for prop in self:
+            # Contactos activos que no hicieron oferta todavía
+            partners_disponibles = self.env['res.partner'].search([
+                ('active', '=', True),
+                ('id', 'not in', prop.offer_partner_ids.ids)
+            ])
+            if not partners_disponibles:
+                raise UserError("No hay contactos disponibles para generar una oferta automática.")
+
+            # Contacto al azar
+            partner = random.choice(partners_disponibles)
+
+            # Precio aleatorio entre -30% y +30%
+            if prop.expected_price <= 0:
+                raise UserError("La propiedad no tiene un precio esperado válido.")
+            precio_aleatorio = prop.expected_price * random.uniform(0.7, 1.3)
+
+            # Se crea la oferta
+            self.env['estate.property.offer'].create({
+                'price': round(precio_aleatorio, 2),
+                'status': 'refused',
+                'partner_id': partner.id,
+                'property_id': prop.id,
+                'validity': 7
+            })
+
+
+    def action_clear_tags(self):
+        for record in self:
+            record.tag_ids = [Command.clear()]
+
+    
+    def action_load_all_tags(self):
+        all_tags = self.env["estate.property.tag"].search([])
+        if not all_tags:
+            raise UserError("No existen etiquetas para cargar.")
+        for record in self:
+            record.tag_ids = [Command.set(all_tags.ids)]
+
+    def action_add_new_tag(self):
+        tag_model = self.env["estate.property.tag"]
+        tag = tag_model.search([("name", "=", "A estrenar")], limit=1)
+
+        if not tag:
+            tag = tag_model.create({"name": "A estrenar"})
+
+        for record in self:
+            if tag.id not in record.tag_ids.ids:
+                record.tag_ids = [Command.link(tag.id)]
+
+
+    @api.ondelete(at_uninstall=False)
+    def _unlink_if_new_or_cancelled(self):
+        for record in self:
+            if record.state not in ('nuevo', 'cancelado'):
+                raise UserError("Solo se pueden eliminar propiedades con estado 'Nuevo' o 'Cancelado'")
     
