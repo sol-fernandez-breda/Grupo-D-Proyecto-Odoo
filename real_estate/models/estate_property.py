@@ -88,6 +88,7 @@ class EstateProperty(models.Model):
         store=True
     )
     
+    @api.depends('offer_ids.price')
     def _compute_best_offer(self):
         for record in self:
             offers = record.offer_ids.mapped('price')
